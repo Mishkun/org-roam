@@ -52,6 +52,12 @@ Valid values are
   :type 'string
   :group 'org-roam)
 
+(defcustom org-roam-title-to-id-transform nil
+  "function to customize transforming  title to id when creating a new org-roam file
+   uses kebab case by default when nil"
+  :type 'string
+  :group 'org-roam)
+
 (defcustom org-roam-buffer-width 0.33 "Width of `org-roam' buffer."
   :type 'number
   :group 'org-roam)
@@ -169,6 +175,10 @@ If `ABSOLUTE', return the absolute file-path. Else, return the relative file-pat
   (or (org-roam--get-title file-path)
       (org-roam--get-id file-path)))
 
+(defun org-roam--title-to-kebab-case (title)
+  "transform to "
+  (replace-regexp-in-string "\s+" "-" title))
+
 ;;; Creating org-roam files
 (defun org-roam--new-file-named (slug)
   "Create a new file named `SLUG'.
@@ -195,10 +205,14 @@ If `ABSOLUTE', return the absolute file-path. Else, return the relative file-pat
                                 (list (org-roam--get-title-or-id file)
                                       (org-roam--get-id file)))
                               (org-roam--find-all-files)))
-         (title (completing-read "File: " completions))
+         (title (completing-read "File Title: " completions))
          (id (cadr (assoc title completions))))
     (unless id
-      (setq id (read-string "Enter new file id: ")))
+      (setq id (let ((completion (funcall
+                                  (or org-roam-title-to-id-transform
+                                      org-roam--title-to-kebab-case)
+                                 title)))
+            (read-string "Enter new file id:" completion))))
     (let ((file-path (org-roam--get-file-path id)))
       (unless (file-exists-p file-path)
         (make-empty-file file-path))
